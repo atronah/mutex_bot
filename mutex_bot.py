@@ -1,8 +1,10 @@
 import collections
 import os
 
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater
 from telegram.ext import CommandHandler, MessageHandler
+from telegram.ext import CallbackQueryHandler, CallbackContext
 from telegram.ext import Filters
 import yaml
 import logging, logging.config
@@ -56,7 +58,6 @@ settings = {
 }
 
 
-
 def recursive_update(target_dict, update_dict):
     if not isinstance(update_dict, dict):
         return target_dict
@@ -66,6 +67,7 @@ def recursive_update(target_dict, update_dict):
         else:
             target_dict[k] = v
     return target_dict
+
 
 if os.path.exists('conf.yml'):
     with open('conf.yml', 'rt') as conf:
@@ -87,6 +89,12 @@ updater = Updater(token=settings['access']['token'], use_context=True)
 dispatcher = updater.dispatcher
 
 
+def build_options_markup(query_data) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+                                  [InlineKeyboardButton("Option 1" + ('*' if query_data == '1' else ''), callback_data='1')],
+                                  [InlineKeyboardButton("Option 2" + ('*' if query_data == '2' else ''), callback_data='2')],
+                              ])
+
 def start(update, context):
     user = update.effective_user
     chat = update.effective_chat
@@ -101,9 +109,24 @@ def message_logger(update, context):
     update.message.reply_text("I don't understand what you mean, that's why I've logged your message")
 
 
+def test(update: Update, context: CallbackContext) -> None:
+    update.message.reply_text('Please choose:',
+                              reply_markup=build_options_markup(query_data=None))
+
+
+def button(update: Update, context: CallbackContext) -> None:
+    query = update.callback_query
+
+    # CallbackQueries need to be answered, even if no notification to the user is needed
+    # Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
+    query.answer()
+    query.edit_message_text(text='nice choice', reply_markup=build_options_markup(query_data=query.data))
+
 
 dispatcher.add_handler(CommandHandler('start', start))
+dispatcher.add_handler(CommandHandler('test', test))
 dispatcher.add_handler(MessageHandler(Filters.all, message_logger))
+dispatcher.add_handler(CallbackQueryHandler(button))
 
 
 logging.info('start polling...')
