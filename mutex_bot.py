@@ -2,7 +2,7 @@ import collections
 import os
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater
+from telegram.ext import Updater, PicklePersistence
 from telegram.ext import CommandHandler, MessageHandler
 from telegram.ext import CallbackQueryHandler, CallbackContext
 from telegram.ext import Filters
@@ -10,12 +10,16 @@ import yaml
 import logging, logging.config
 import sys
 import threading
+from datetime import datetime
 
 
 # default settings
 settings = {
     'access': {
         'token': None
+    },
+    'persistence': {
+        'filename': 'mutex_bot.data'
     },
     'logging': {
         'version': 1.0,
@@ -57,6 +61,7 @@ settings = {
     }
 }
 
+ADD_RESOURCE = '__add_resource'
 
 def recursive_update(target_dict, update_dict):
     if not isinstance(update_dict, dict):
@@ -79,28 +84,45 @@ else:
 
 logging.config.dictConfig(settings['logging'])
 
-
 if not settings['access']['token']:
     logging.error('Empty bot token in conf.yml (`access/token`)')
     sys.exit(1)
 
+if not settings['persistence']['filename']:
+    logging.error('Empty filename fot persistence in conf.yml (`persistence/filename`)')
+    sys.exit(1)
 
-updater = Updater(token=settings['access']['token'], use_context=True)
+pp = PicklePersistence(settings['persistence']['filename'])
+updater = Updater(token=settings['access']['token'], persistence=pp, use_context=True)
 dispatcher = updater.dispatcher
 
 
-def build_options_markup(query_data) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-                                  [InlineKeyboardButton("Option 1" + ('*' if query_data == '1' else ''), callback_data='1')],
-                                  [InlineKeyboardButton("Option 2" + ('*' if query_data == '2' else ''), callback_data='2')],
-                              ])
+def build_keyboard(update: Update, context: CallbackContext) -> InlineKeyboardMarkup:
+    def button_name(resource_name, acquired, user_id, user_name):
+        state_mark = f"{'🔴' if acquired else '⚪️'}"
+        acquire_info = (' (' + (user_name or user_id or '?') + ')') if acquired else ''
+        return f'{state_mark} {resource_name}{acquire_info}'
+
+    buttons = [
+                  [InlineKeyboardButton(
+                                        button_name(k, r['acquired'], *r['user']),
+                                        # f"{'🔴' if r['acquired'] else '⚪️'}"
+                                        # f" {k}"
+                                        # f"{(' (' + (r['user'][1] or r['user'][0] or '?') + ')') if r['acquired'] else ''}",
+                                        callback_data=k)]
+                  for k, r in context.chat_data['resources'].items()
+                  if k != ADD_RESOURCE
+              ]
+    buttons.append([InlineKeyboardButton("Add resource", callback_data=ADD_RESOURCE)])
+    return InlineKeyboardMarkup(buttons)
+
 
 def start(update, context):
     user = update.effective_user
     chat = update.effective_chat
-    update.message.reply_markdown(f'Hello, {user.username}!\n'
-                                  f'Your user ID is `{user.id}`'
-                                  f' and our    chat ID is `{chat.id}`')
+    context.chat_data.setdefault('resources', {})
+    update.message.reply_markdown('Resources'
+                                  , reply_markup=build_keyboard(update=update, context=context))
 
 
 def message_logger(update, context):
@@ -109,22 +131,31 @@ def message_logger(update, context):
     update.message.reply_text("I don't understand what you mean, that's why I've logged your message")
 
 
-def test(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text('Please choose:',
-                              reply_markup=build_options_markup(query_data=None))
-
-
 def button(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
+
+    if query.data == ADD_RESOURCE:
+        resource_name = f"Resource {len(context.chat_data['resources']) + 1}"
+        context.chat_data['resources'][resource_name] = {
+            'acquired': None,
+            'user': (None, None)
+        }
+    elif query.data in context.chat_data['resources']:
+        resource = context.chat_data['resources'][query.data]
+        if resource['acquired']:
+            resource['acquired'] = None
+            resource['user'] = (None, None)
+        else:
+            resource['acquired'] = datetime.now()
+            resource['user'] = (update.effective_user.id, update.effective_user.username)
 
     # CallbackQueries need to be answered, even if no notification to the user is needed
     # Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
     query.answer()
-    query.edit_message_text(text='nice choice', reply_markup=build_options_markup(query_data=query.data))
+    query.edit_message_text(text='Resources', reply_markup=build_keyboard(update, context))
 
 
 dispatcher.add_handler(CommandHandler('start', start))
-dispatcher.add_handler(CommandHandler('test', test))
 dispatcher.add_handler(MessageHandler(Filters.all, message_logger))
 dispatcher.add_handler(CallbackQueryHandler(button))
 
