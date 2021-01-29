@@ -2,7 +2,7 @@ import collections.abc
 import os
 from typing import Dict, Any
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, User
 from telegram.ext import Updater, PicklePersistence
 from telegram.ext import CommandHandler, MessageHandler
 from telegram.ext import CallbackQueryHandler, CallbackContext
@@ -68,6 +68,53 @@ settings: Dict[str, Dict[str, Any]] = {
 ADD_RESOURCE = '__add_resource'
 
 
+class Resource(object):
+    def __init__(self, name: str):
+        self._name = name
+        self._acquired: datetime = None
+        self._user: User = None
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def user(self):
+        return self._user
+
+    @property
+    def acquired(self):
+        return self._acquired
+
+    @property
+    def display_name(self) -> str:
+        state_mark = '🔴' if self._acquired else '⚪️'
+        acquiring_info = f'({self._user.name})' if self._acquired else ''
+        return f'{state_mark} {self.name} {acquiring_info}'
+
+    def acquire(self, user: User) -> tuple[bool, str]:
+        if not self._acquired:
+            self._acquired = datetime.now()
+            self._user = user
+            return True, ''
+        elif self._user == user:
+            self._acquired = datetime.now()
+            return True, 're-acquired'
+        return False, f'The resource is already acquired by {self.user.name}'
+
+    def release(self, user: User) -> tuple[bool, str]:
+        if not self.acquired:
+            return True, ''
+        elif self._user == user:
+            self._acquired = None
+            self._user = None
+            return True, ''
+        return False, f'The resource has been acquired by another user: {self.user.name}'
+
+    def change_state(self, user: User) -> tuple[bool, str]:
+        return self.release(user) if self.acquired else self.acquire(user)
+
+
 def recursive_update(target_dict, update_dict):
     if not isinstance(update_dict, dict):
         return target_dict
@@ -104,14 +151,8 @@ dispatcher = updater.dispatcher
 
 
 def build_keyboard(update: Update, context: CallbackContext) -> InlineKeyboardMarkup:
-    def button_name(resource_name, acquired, user_id, user_name):
-        state_mark = f"{'🔴' if acquired else '⚪️'}"
-        acquire_info = (' (' + (user_name or user_id or '?') + ')') if acquired else ''
-        return f'{state_mark} {resource_name}{acquire_info}'
-
     buttons = [
-                  [InlineKeyboardButton(
-                                        button_name(k, r['acquired'], *r['user']),
+                  [InlineKeyboardButton(r.display_name,
                                         callback_data=k)]
                   for k, r in context.chat_data['resources'].items()
                   if k != ADD_RESOURCE
@@ -140,25 +181,17 @@ def button(update: Update, context: CallbackContext) -> None:
         cnt = len(resources)
         if cnt < settings['resources']['limit']:
             resource_name = f"Resource {cnt + 1}"
-            resources[resource_name] = {
-                'acquired': None,
-                'user': (None, None)
-            }
+            resources[resource_name] = Resource(resource_name)
         else:
             context.bot.send_message(chat_id=update.effective_chat.id,
                                      text=f"Resources limit ({settings['resources']['limit']}) has been reached")
     elif query.data in context.chat_data['resources']:
         resource = context.chat_data['resources'][query.data]
-        if not resource['acquired']:
-            resource['acquired'] = datetime.now()
-            resource['user'] = (update.effective_user.id, update.effective_user.username)
-        elif resource['user'][0] == update.effective_user.id:
-            resource['acquired'] = None
-            resource['user'] = (None, None)
-        else:
-            username = resource['user'][1] or resource['user'][0]
+
+        state, message = resource.change_state(update.effective_user)
+        if message:
             context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text=f"You have to wait for it to be released by @{username}")
+                                     text=message)
 
     # CallbackQueries need to be answered, even if no notification to the user is needed
     # Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
