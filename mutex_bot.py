@@ -1,5 +1,6 @@
-import collections
+import collections.abc
 import os
+from typing import Dict, Any
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, PicklePersistence
@@ -7,14 +8,14 @@ from telegram.ext import CommandHandler, MessageHandler
 from telegram.ext import CallbackQueryHandler, CallbackContext
 from telegram.ext import Filters
 import yaml
-import logging, logging.config
+import logging
+import logging.config
 import sys
-import threading
 from datetime import datetime
 
 
 # default settings
-settings = {
+settings: Dict[str, Dict[str, Any]] = {
     'access': {
         'token': None
     },
@@ -63,6 +64,7 @@ settings = {
 
 ADD_RESOURCE = '__add_resource'
 
+
 def recursive_update(target_dict, update_dict):
     if not isinstance(update_dict, dict):
         return target_dict
@@ -92,6 +94,7 @@ if not settings['persistence']['filename']:
     logging.error('Empty filename fot persistence in conf.yml (`persistence/filename`)')
     sys.exit(1)
 
+
 pp = PicklePersistence(settings['persistence']['filename'])
 updater = Updater(token=settings['access']['token'], persistence=pp, use_context=True)
 dispatcher = updater.dispatcher
@@ -106,9 +109,6 @@ def build_keyboard(update: Update, context: CallbackContext) -> InlineKeyboardMa
     buttons = [
                   [InlineKeyboardButton(
                                         button_name(k, r['acquired'], *r['user']),
-                                        # f"{'🔴' if r['acquired'] else '⚪️'}"
-                                        # f" {k}"
-                                        # f"{(' (' + (r['user'][1] or r['user'][0] or '?') + ')') if r['acquired'] else ''}",
                                         callback_data=k)]
                   for k, r in context.chat_data['resources'].items()
                   if k != ADD_RESOURCE
@@ -117,12 +117,10 @@ def build_keyboard(update: Update, context: CallbackContext) -> InlineKeyboardMa
     return InlineKeyboardMarkup(buttons)
 
 
-def start(update, context):
-    user = update.effective_user
-    chat = update.effective_chat
+def start(update: Update, context: CallbackContext):
     context.chat_data.setdefault('resources', {})
-    update.message.reply_markdown('Resources'
-                                  , reply_markup=build_keyboard(update=update, context=context))
+    update.message.reply_markdown('Resources',
+                                  reply_markup=build_keyboard(update=update, context=context))
 
 
 def message_logger(update, context):
