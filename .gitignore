@@ -1,2 +1,6 @@
 *.yml
 *.log
+*.data
+.idea/**
+mutex_bot.egg-info/**
+venv/**
