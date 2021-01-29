@@ -22,6 +22,9 @@ settings: Dict[str, Dict[str, Any]] = {
     'persistence': {
         'filename': 'mutex_bot.data'
     },
+    'resources': {
+        'limit': 10
+    },
     'logging': {
         'version': 1.0,
         'formatters': {
@@ -133,11 +136,17 @@ def button(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
 
     if query.data == ADD_RESOURCE:
-        resource_name = f"Resource {len(context.chat_data['resources']) + 1}"
-        context.chat_data['resources'][resource_name] = {
-            'acquired': None,
-            'user': (None, None)
-        }
+        resources = context.chat_data['resources']
+        cnt = len(resources)
+        if cnt < settings['resources']['limit']:
+            resource_name = f"Resource {cnt + 1}"
+            resources[resource_name] = {
+                'acquired': None,
+                'user': (None, None)
+            }
+        else:
+            context.bot.send_message(chat_id=update.effective_chat.id,
+                                     text=f"Resources limit ({settings['resources']['limit']}) has been reached")
     elif query.data in context.chat_data['resources']:
         resource = context.chat_data['resources'][query.data]
         if resource['acquired']:
