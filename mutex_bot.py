@@ -149,12 +149,16 @@ def button(update: Update, context: CallbackContext) -> None:
                                      text=f"Resources limit ({settings['resources']['limit']}) has been reached")
     elif query.data in context.chat_data['resources']:
         resource = context.chat_data['resources'][query.data]
-        if resource['acquired']:
+        if not resource['acquired']:
+            resource['acquired'] = datetime.now()
+            resource['user'] = (update.effective_user.id, update.effective_user.username)
+        elif resource['user'][0] == update.effective_user.id:
             resource['acquired'] = None
             resource['user'] = (None, None)
         else:
-            resource['acquired'] = datetime.now()
-            resource['user'] = (update.effective_user.id, update.effective_user.username)
+            username = resource['user'][1] or resource['user'][0]
+            context.bot.send_message(chat_id=update.effective_chat.id,
+                                     text=f"You have to wait for it to be released by @{username}")
 
     # CallbackQueries need to be answered, even if no notification to the user is needed
     # Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
