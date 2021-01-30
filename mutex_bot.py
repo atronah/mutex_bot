@@ -168,10 +168,10 @@ def add_resource(update: Update, context: CallbackContext):
     if context.args:
         resource_name = ' '.join(context.args)
         if resource_name in resources:
-            message = f'Resource with the name {context.args[0]} already exists'
+            message = f'Resource with the name "{context.args[0]}" already exists'
         else:
             resources[resource_name] = Resource(resource_name)
-            message = f'Resource {context.args[0]} was added successfully'
+            message = f'Resource "{context.args[0]}" was added successfully'
     else:
         message = 'You have to specify a name of resource after the command'
 
