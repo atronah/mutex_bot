@@ -219,6 +219,10 @@ def export_chat_data(update: Update, context: CallbackContext):
         update.message.reply_text('Nothing to export')
 
 
+def import_chat_data(update: Update, context: CallbackContext):
+    update.message.reply_text('Maybe later... ')
+
+
 def message_logger(update, context):
     logger = logging.getLogger('unknown_messages')
     logger.debug(f'{update.effective_user.id} {update.message.text}')
@@ -257,6 +261,7 @@ dispatcher.add_handler(CommandHandler('start', start))
 dispatcher.add_handler(CommandHandler('add_resource', add_resource))
 dispatcher.add_handler(CommandHandler('remove_resource', remove_resource))
 dispatcher.add_handler(CommandHandler('export_chat_data', export_chat_data))
+dispatcher.add_handler(CommandHandler('import_chat_data', import_chat_data))
 dispatcher.add_handler(MessageHandler(Filters.all, message_logger))
 dispatcher.add_handler(CallbackQueryHandler(button))
 
