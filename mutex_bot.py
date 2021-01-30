@@ -65,8 +65,6 @@ settings: Dict[str, Dict[str, Any]] = {
     }
 }
 
-ADD_RESOURCE = '__add_resource'
-
 
 class Resource(object):
     def __init__(self, name: str):
@@ -155,16 +153,30 @@ def build_keyboard(update: Update, context: CallbackContext) -> InlineKeyboardMa
                   [InlineKeyboardButton(r.display_name,
                                         callback_data=k)]
                   for k, r in context.chat_data['resources'].items()
-                  if k != ADD_RESOURCE
               ]
-    buttons.append([InlineKeyboardButton("Add resource", callback_data=ADD_RESOURCE)])
     return InlineKeyboardMarkup(buttons)
 
 
 def start(update: Update, context: CallbackContext):
-    context.chat_data.setdefault('resources', {})
-    update.message.reply_markdown('Resources',
+    update.message.reply_markdown('Your resources',
                                   reply_markup=build_keyboard(update=update, context=context))
+
+
+def add_resource(update: Update, context: CallbackContext):
+    resources = context.chat_data.setdefault('resources', {})
+
+    if context.args:
+        resource_name = ' '.join(context.args)
+        if resource_name in resources:
+            message = f'Resource with the name {context.args[0]} already exists'
+        else:
+            resources[resource_name] = Resource(resource_name)
+            message = f'Resource {context.args[0]} was added successfully'
+    else:
+        message = 'You have to specify a name of resource after the command'
+
+    update.message.reply_text(message,
+                              reply_markup = build_keyboard(update=update, context=context))
 
 
 def message_logger(update, context):
@@ -176,30 +188,21 @@ def message_logger(update, context):
 def button(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
 
-    if query.data == ADD_RESOURCE:
-        resources = context.chat_data['resources']
-        cnt = len(resources)
-        if cnt < settings['resources']['limit']:
-            resource_name = f"Resource {cnt + 1}"
-            resources[resource_name] = Resource(resource_name)
-        else:
-            context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text=f"Resources limit ({settings['resources']['limit']}) has been reached")
-    elif query.data in context.chat_data['resources']:
+    if query.data in context.chat_data['resources']:
         resource = context.chat_data['resources'][query.data]
 
-        state, message = resource.change_state(update.effective_user)
-        if message:
-            context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text=message)
+        state, answer_message = resource.change_state(update.effective_user)
+    else:
+        answer_message = f'unknown resource: {query.data}'
 
     # CallbackQueries need to be answered, even if no notification to the user is needed
     # Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
-    query.answer()
-    query.edit_message_text(text='Resources', reply_markup=build_keyboard(update, context))
+    query.answer(answer_message or 'done')
+    query.edit_message_text(text='Your resources', reply_markup=build_keyboard(update, context))
 
 
 dispatcher.add_handler(CommandHandler('start', start))
+dispatcher.add_handler(CommandHandler('add_resource', add_resource))
 dispatcher.add_handler(MessageHandler(Filters.all, message_logger))
 dispatcher.add_handler(CallbackQueryHandler(button))
 
