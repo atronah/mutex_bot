@@ -1,4 +1,5 @@
 import collections.abc
+import io
 import os
 from typing import Dict, Any
 
@@ -91,6 +92,18 @@ class Resource(object):
         state_mark = '🔴' if self._acquired else '⚪️'
         acquiring_info = f'({self._user.name})' if self._acquired else ''
         return f'{state_mark} {self.name} {acquiring_info}'
+
+    @property
+    def data(self):
+        return {
+            'name': self.name,
+            'acquired': self.acquired,
+            'user': {
+                'id': self.user.id,
+                'username': self.user.username,
+                'fullname': self.user.full_name,
+            }
+        }
 
     def acquire(self, user: User) -> tuple[bool, str]:
         if not self._acquired:
@@ -190,6 +203,22 @@ def remove_resource(update: Update, context: CallbackContext):
                               reply_markup=build_keyboard(update=update, context=context))
 
 
+def export_chat_data(update: Update, context: CallbackContext):
+    exporting_chat_data = {'chat_id': update.effective_chat.id,
+                           'exported': datetime.now(),
+                           'resources': []
+                           }
+    if 'resources' in context.chat_data:
+        for n, r in context.chat_data['resources'].items():
+            exporting_chat_data['resources'].append(r.data)
+        filename = f'chat_data_{update.effective_chat.id}.yml'
+        string_stream = io.StringIO(yaml.safe_dump(exporting_chat_data))
+        update.message.reply_document(document=string_stream,
+                                      filename=filename)
+    else:
+        update.message.reply_text('Nothing to export')
+
+
 def message_logger(update, context):
     logger = logging.getLogger('unknown_messages')
     logger.debug(f'{update.effective_user.id} {update.message.text}')
@@ -227,6 +256,7 @@ def button(update: Update, context: CallbackContext) -> None:
 dispatcher.add_handler(CommandHandler('start', start))
 dispatcher.add_handler(CommandHandler('add_resource', add_resource))
 dispatcher.add_handler(CommandHandler('remove_resource', remove_resource))
+dispatcher.add_handler(CommandHandler('export_chat_data', export_chat_data))
 dispatcher.add_handler(MessageHandler(Filters.all, message_logger))
 dispatcher.add_handler(CallbackQueryHandler(button))
 
