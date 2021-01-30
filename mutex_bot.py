@@ -65,6 +65,8 @@ settings: Dict[str, Dict[str, Any]] = {
     }
 }
 
+STANDARD_USER_MODE, REMOVING_USER_MODE = range(2)
+FINISH_REMOVING = '__finish_removing'
 
 class Resource(object):
     def __init__(self, name: str):
@@ -107,7 +109,7 @@ class Resource(object):
             self._acquired = None
             self._user = None
             return True, ''
-        return False, f'The resource has been acquired by another user: {self.user.name}'
+        return False, f'You cannot release resource acquired by another user: {self.user.name}'
 
     def change_state(self, user: User) -> tuple[bool, str]:
         return self.release(user) if self.acquired else self.acquire(user)
@@ -154,6 +156,8 @@ def build_keyboard(update: Update, context: CallbackContext) -> InlineKeyboardMa
                                         callback_data=k)]
                   for k, r in context.chat_data['resources'].items()
               ]
+    if context.user_data.get('mode', STANDARD_USER_MODE) == REMOVING_USER_MODE:
+        buttons.append([InlineKeyboardButton('----> Finish removing <----', callback_data=FINISH_REMOVING)])
     return InlineKeyboardMarkup(buttons)
 
 
@@ -179,6 +183,13 @@ def add_resource(update: Update, context: CallbackContext):
                               reply_markup = build_keyboard(update=update, context=context))
 
 
+def remove_resource(update: Update, context: CallbackContext):
+    context.user_data['mode'] = REMOVING_USER_MODE
+
+    update.message.reply_text('Choose resource to remove it',
+                              reply_markup=build_keyboard(update=update, context=context))
+
+
 def message_logger(update, context):
     logger = logging.getLogger('unknown_messages')
     logger.debug(f'{update.effective_user.id} {update.message.text}')
@@ -188,10 +199,22 @@ def message_logger(update, context):
 def button(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
 
-    if query.data in context.chat_data['resources']:
+    if query.data == FINISH_REMOVING:
+        context.user_data['mode'] = STANDARD_USER_MODE
+        answer_message = 'Removing finished'
+    elif query.data in context.chat_data['resources']:
         resource = context.chat_data['resources'][query.data]
 
-        state, answer_message = resource.change_state(update.effective_user)
+        user_mode = context.user_data.get('mode', STANDARD_USER_MODE)
+        if user_mode == STANDARD_USER_MODE:
+            _, answer_message = resource.change_state(update.effective_user)
+        elif user_mode == REMOVING_USER_MODE:
+            can_be_removed, _ = resource.release(update.effective_user)
+            if can_be_removed:
+                del context.chat_data['resources'][query.data]
+                answer_message = 'done'
+            else:
+                answer_message = 'You cannot remove acquired resource'
     else:
         answer_message = f'unknown resource: {query.data}'
 
@@ -203,6 +226,7 @@ def button(update: Update, context: CallbackContext) -> None:
 
 dispatcher.add_handler(CommandHandler('start', start))
 dispatcher.add_handler(CommandHandler('add_resource', add_resource))
+dispatcher.add_handler(CommandHandler('remove_resource', remove_resource))
 dispatcher.add_handler(MessageHandler(Filters.all, message_logger))
 dispatcher.add_handler(CallbackQueryHandler(button))
 
