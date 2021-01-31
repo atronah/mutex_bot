@@ -37,7 +37,7 @@ settings: Dict[str, Dict[str, Any]] = {
         'handlers': {
             'general': {
                 'class': 'logging.handlers.WatchedFileHandler',
-                'level': 'DEBUG',
+                'level': 'INFO',
                 'filename': 'bot.log',
                 'formatter': 'default'
             },
@@ -48,19 +48,19 @@ settings: Dict[str, Dict[str, Any]] = {
             },
             'unknown_messages': {
                 'class': 'logging.handlers.WatchedFileHandler',
-                'level': 'DEBUG',
+                'level': 'INFO',
                 'filename': 'unknown_messages.log',
                 'formatter': 'default'
             }
         },
         'loggers': {
             'unknown_messages': {
-                'level': 'DEBUG',
+                'level': 'INFO',
                 'handlers': ['unknown_messages']
             }
         },
         'root': {
-            'level': 'DEBUG',
+            'level': 'INFO',
             'handlers': ['general']
         },
     }
@@ -68,6 +68,7 @@ settings: Dict[str, Dict[str, Any]] = {
 
 STANDARD_USER_MODE, REMOVING_USER_MODE = range(2)
 FINISH_REMOVING = '__finish_removing'
+
 
 class Resource(object):
     def __init__(self, name: str):
