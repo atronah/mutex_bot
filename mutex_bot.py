@@ -179,7 +179,10 @@ def build_keyboard(update: Update, context: CallbackContext) -> InlineKeyboardMa
 
 
 def start(update: Update, context: CallbackContext):
-    update.message.reply_markdown('Your resources',
+    if len(context.chat_data.get('resources', [])) == 0:
+        update.message.reply_markdown('At first you must add resources by `/add_resource <resource_name>` command')
+    else:
+        update.message.reply_text('Your resources',
                                   reply_markup=build_keyboard(update=update, context=context))
 
 
