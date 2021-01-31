@@ -106,7 +106,7 @@ class Resource(object):
             }
         }
 
-    def acquire(self, user: User):
+    def acquire(self, user):
         # type: (User) -> tuple[bool, str]
         if not self._acquired:
             self._acquired = datetime.now()
@@ -117,7 +117,7 @@ class Resource(object):
             return True, 're-acquired'
         return False, f'The resource is already acquired by {self.user.name}'
 
-    def release(self, user: User):
+    def release(self, user):
         # type: (User) -> tuple[bool, str]
         if not self.acquired:
             return True, ''
@@ -127,7 +127,7 @@ class Resource(object):
             return True, ''
         return False, f'You cannot release resource acquired by another user: {self.user.name}'
 
-    def change_state(self, user: User):
+    def change_state(self, user):
         # type: (User) -> tuple[bool, str]
         return self.release(user) if self.acquired else self.acquire(user)
 
