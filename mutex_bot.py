@@ -269,7 +269,9 @@ dispatcher.add_handler(CommandHandler('add_resource', add_resource))
 dispatcher.add_handler(CommandHandler('remove_resource', remove_resource))
 dispatcher.add_handler(CommandHandler('export_chat_data', export_chat_data))
 dispatcher.add_handler(CommandHandler('import_chat_data', import_chat_data))
-dispatcher.add_handler(MessageHandler(Filters.all, message_logger))
+dispatcher.add_handler(MessageHandler((Filters.chat_type.private & Filters.command) |
+                                      (~Filters.chat_type.private & Filters.all & ~Filters.status_update),
+                                      message_logger))
 dispatcher.add_handler(CallbackQueryHandler(button))
 
 
