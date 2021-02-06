@@ -178,6 +178,10 @@ def build_keyboard(update: Update, context: CallbackContext) -> InlineKeyboardMa
     return InlineKeyboardMarkup(buttons)
 
 
+def error_handler(update: Update, context: CallbackContext):
+    update.message.reply_markdown(context.error.message)
+
+
 def start(update: Update, context: CallbackContext):
     if len(context.chat_data.get('resources', [])) == 0:
         update.message.reply_markdown('At first you must add resources by `/add_resource <resource_name>` command')
@@ -264,6 +268,7 @@ def button(update: Update, context: CallbackContext) -> None:
     query.edit_message_text(text='Your resources', reply_markup=build_keyboard(update, context))
 
 
+dispatcher.add_error_handler(error_handler)
 dispatcher.add_handler(CommandHandler('start', start))
 dispatcher.add_handler(CommandHandler('add_resource', add_resource))
 dispatcher.add_handler(CommandHandler('remove_resource', remove_resource))
