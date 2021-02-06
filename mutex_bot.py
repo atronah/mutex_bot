@@ -16,6 +16,8 @@ from datetime import datetime
 
 
 # default settings
+from telegram.utils import helpers
+
 settings: Dict[str, Dict[str, Any]] = {
     'access': {
         'token': None
@@ -190,6 +192,28 @@ def start(update: Update, context: CallbackContext):
                                   reply_markup=build_keyboard(update=update, context=context))
 
 
+def help_command(update: Update, context: CallbackContext):
+    update.message.reply_text('Hello')
+    help_message = 'That bot helps to manage resources with exclusive access.\n' \
+                   'It allows you to see which ones are busy and which ones are free' \
+                   ' and change that its state just by tap on them in resources list\n' \
+                   '\n' \
+                   'Available commands:\n' \
+                   '\n' \
+                   '- /start - Starts the bot or/and shows the status of resources\n' \
+                   '- /help - Shows that message\n' \
+                   '- /add_resource <name> - Adds new resource with name `<name>`' \
+                   ' to resources list of that chat\n' \
+                   '- /remove_resource - Swithes the user to removing mode' \
+                   ' when he can remove one or more resources' \
+                   ' just by tapping them in resources list\n' \
+                   '- /export_chat_data - Sends to chat .yml file with resources and its states\n' \
+                   '- /import_chat_data - (Not implemented) loads resources with ots states' \
+                   ' from .yml file which was sent to the chat after that command\n'
+
+    update.message.reply_markdown_v2(helpers.escape_markdown(help_message, 2))
+
+
 def add_resource(update: Update, context: CallbackContext):
     resources = context.chat_data.setdefault('resources', {})
 
@@ -270,6 +294,7 @@ def button(update: Update, context: CallbackContext) -> None:
 
 dispatcher.add_error_handler(error_handler)
 dispatcher.add_handler(CommandHandler('start', start))
+dispatcher.add_handler(CommandHandler('help', help_command))
 dispatcher.add_handler(CommandHandler('add_resource', add_resource))
 dispatcher.add_handler(CommandHandler('remove_resource', remove_resource))
 dispatcher.add_handler(CommandHandler('export_chat_data', export_chat_data))
