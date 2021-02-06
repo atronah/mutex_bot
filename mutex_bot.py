@@ -205,7 +205,7 @@ def help_command(update: Update, context: CallbackContext):
                    '- /help - Shows that message\n' \
                    '- /add_resource <name> - Adds new resource with name `<name>`' \
                    ' to resources list of that chat\n' \
-                   '- /remove_resource - Swithes the user to removing mode' \
+                   '- /remove_resource - Switches the user to removing mode' \
                    ' when he can remove one or more resources' \
                    ' just by tapping them in resources list\n' \
                    '- /export_chat_data - Sends to chat .yml file with resources and its states\n' \
