@@ -1,6 +1,7 @@
 import collections.abc
 import io
 import os
+import re
 from typing import Dict, Any
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, User
@@ -182,6 +183,7 @@ def build_keyboard(update: Update, context: CallbackContext) -> InlineKeyboardMa
 
 def error_handler(update: Update, context: CallbackContext):
     update.message.reply_markdown(context.error.message)
+    raise context.error
 
 
 def start(update: Update, context: CallbackContext):
@@ -193,7 +195,6 @@ def start(update: Update, context: CallbackContext):
 
 
 def help_command(update: Update, context: CallbackContext):
-    update.message.reply_text('Hello')
     help_message = 'That bot helps to manage resources with exclusive access.\n' \
                    'It allows you to see which ones are busy and which ones are free' \
                    ' and change that its state just by tap on them in resources list\n' \
@@ -210,8 +211,9 @@ def help_command(update: Update, context: CallbackContext):
                    '- /export_chat_data - Sends to chat .yml file with resources and its states\n' \
                    '- /import_chat_data - (Not implemented) loads resources with ots states' \
                    ' from .yml file which was sent to the chat after that command\n'
-
-    update.message.reply_markdown_v2(helpers.escape_markdown(help_message, 2))
+    escape_chars = r'_*[]()~>#+-=|{}.!'
+    help_message = re.sub(f'([{re.escape(escape_chars)}])', r'\\\1', help_message)
+    update.message.reply_markdown_v2(help_message)
 
 
 def add_resource(update: Update, context: CallbackContext):
