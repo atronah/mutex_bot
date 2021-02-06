@@ -203,13 +203,13 @@ def help_command(update: Update, context: CallbackContext):
                    '\n' \
                    '- /start - Starts the bot or/and shows the status of resources\n' \
                    '- /help - Shows that message\n' \
-                   '- /add_resource <name> - Adds new resource with name `<name>`' \
+                   '- /add_resource `<name>` - Adds new resource with name `<name>`' \
                    ' to resources list of that chat\n' \
                    '- /remove_resource - Switches the user to removing mode' \
                    ' when he can remove one or more resources' \
                    ' just by tapping them in resources list\n' \
                    '- /export_chat_data - Sends to chat .yml file with resources and its states\n' \
-                   '- /import_chat_data - (Not implemented) loads resources with ots states' \
+                   '- /import_chat_data - (not implemented) loads resources with ots states' \
                    ' from .yml file which was sent to the chat after that command\n'
     escape_chars = r'_*[]()~>#+-=|{}.!'
     help_message = re.sub(f'([{re.escape(escape_chars)}])', r'\\\1', help_message)
