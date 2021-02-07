@@ -186,7 +186,7 @@ def build_keyboard(update: Update, context: CallbackContext) -> InlineKeyboardMa
 
 
 def error_handler(update: Update, context: CallbackContext):
-    update.message.reply_markdown(context.error.message)
+    update.message.reply_markdown(f'Internal exception: {context.error.message}')
     raise context.error
 
 
