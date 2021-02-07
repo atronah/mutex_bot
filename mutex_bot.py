@@ -4,7 +4,7 @@ import os
 import re
 from typing import Dict, Any
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, User
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, User, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import Updater, PicklePersistence
 from telegram.ext import CommandHandler, MessageHandler
 from telegram.ext import CallbackQueryHandler, CallbackContext
@@ -70,7 +70,6 @@ settings: Dict[str, Dict[str, Any]] = {
 }
 
 STANDARD_USER_MODE, REMOVING_USER_MODE = range(2)
-FINISH_REMOVING = '__finish_removing'
 
 
 class Resource(object):
@@ -171,14 +170,18 @@ dispatcher = updater.dispatcher
 
 
 def build_keyboard(update: Update, context: CallbackContext) -> InlineKeyboardMarkup:
-    buttons = [
-                  [InlineKeyboardButton(r.display_name,
-                                        callback_data=k)]
-                  for k, r in context.chat_data['resources'].items()
-              ]
     if context.user_data.get('mode', STANDARD_USER_MODE) == REMOVING_USER_MODE:
-        buttons.append([InlineKeyboardButton('----> Finish removing <----', callback_data=FINISH_REMOVING)])
-    return InlineKeyboardMarkup(buttons)
+        keyboard = ReplyKeyboardMarkup([
+                                           [k] for k in context.chat_data['resources'].keys()
+                                       ] + [['/finish']],
+                                       one_time_keyboard=True,
+                                       selective=True)
+    else:
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton(r.display_name, callback_data=k)]
+            for k, r in context.chat_data['resources'].items()
+        ])
+    return keyboard
 
 
 def error_handler(update: Update, context: CallbackContext):
@@ -230,13 +233,12 @@ def add_resource(update: Update, context: CallbackContext):
         message = 'You have to specify a name of resource after the command'
 
     update.message.reply_text(message,
-                              reply_markup = build_keyboard(update=update, context=context))
+                              reply_markup=build_keyboard(update=update, context=context))
 
 
 def remove_resource(update: Update, context: CallbackContext):
     context.user_data['mode'] = REMOVING_USER_MODE
-
-    update.message.reply_text('Choose resource to remove it',
+    update.message.reply_text('Send me the name of resource you would like to remove',
                               reply_markup=build_keyboard(update=update, context=context))
 
 
@@ -260,33 +262,40 @@ def import_chat_data(update: Update, context: CallbackContext):
     update.message.reply_text('Maybe later... ')
 
 
-def message_logger(update, context):
-    logger = logging.getLogger('unknown_messages')
-    logger.debug(f'{update.effective_user.id} {update.message.text}')
-    update.message.reply_text("I don't understand what you mean, that's why I've logged your message")
+def finish(update: Update, context: CallbackContext):
+    if context.user_data.get('mode', STANDARD_USER_MODE) != STANDARD_USER_MODE:
+        context.user_data['mode'] = STANDARD_USER_MODE
+        update.message.reply_text('Finished', reply_markup=ReplyKeyboardRemove())
+        start(update, context)
+    else:
+        update.message.reply_text('Nothing to finish')
+
+
+def other_messages(update, context):
+    if context.user_data.get('mode', STANDARD_USER_MODE) == REMOVING_USER_MODE:
+        resource_name = update.message.text
+        if resource_name not in context.chat_data.get('resources', {}):
+            answer_message = f'Unknown resource: {resource_name}'
+        else:
+            resource = context.chat_data['resources'][resource_name]
+            can_be_removed, _ = resource.release(update.effective_user)
+            if can_be_removed:
+                del context.chat_data['resources'][resource_name]
+                answer_message = 'Removed'
+            else:
+                answer_message = 'You cannot remove acquired resource.'
+        update.message.reply_text(answer_message, reply_markup=build_keyboard(update, context))
+    else:
+        logger = logging.getLogger('unknown_messages')
+        logger.debug(f'{update.effective_user.id} {update.message.text}')
+        update.message.reply_text("I don't understand what you mean, that's why I've logged your message")
 
 
 def button(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
 
-    if query.data == FINISH_REMOVING:
-        context.user_data['mode'] = STANDARD_USER_MODE
-        answer_message = 'Removing finished'
-    elif query.data in context.chat_data['resources']:
-        resource = context.chat_data['resources'][query.data]
-
-        user_mode = context.user_data.get('mode', STANDARD_USER_MODE)
-        if user_mode == STANDARD_USER_MODE:
-            _, answer_message = resource.change_state(update.effective_user)
-        elif user_mode == REMOVING_USER_MODE:
-            can_be_removed, _ = resource.release(update.effective_user)
-            if can_be_removed:
-                del context.chat_data['resources'][query.data]
-                answer_message = 'done'
-            else:
-                answer_message = 'You cannot remove acquired resource'
-    else:
-        answer_message = f'unknown resource: {query.data}'
+    resource = context.chat_data['resources'][query.data]
+    _, answer_message = resource.change_state(update.effective_user)
 
     # CallbackQueries need to be answered, even if no notification to the user is needed
     # Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
@@ -301,9 +310,10 @@ dispatcher.add_handler(CommandHandler('add_resource', add_resource))
 dispatcher.add_handler(CommandHandler('remove_resource', remove_resource))
 dispatcher.add_handler(CommandHandler('export_chat_data', export_chat_data))
 dispatcher.add_handler(CommandHandler('import_chat_data', import_chat_data))
+dispatcher.add_handler(CommandHandler('finish', finish))
 dispatcher.add_handler(MessageHandler((Filters.chat_type.private & Filters.command) |
                                       (~Filters.chat_type.private & Filters.all & ~Filters.status_update),
-                                      message_logger))
+                                      other_messages))
 dispatcher.add_handler(CallbackQueryHandler(button))
 
 
