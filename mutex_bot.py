@@ -4,7 +4,8 @@ import os
 import re
 from typing import Dict, Any
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, User, ReplyKeyboardMarkup, ReplyKeyboardRemove
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, User, ReplyKeyboardMarkup, ReplyKeyboardRemove, \
+    ParseMode
 from telegram.ext import Updater, PicklePersistence
 from telegram.ext import CommandHandler, MessageHandler
 from telegram.ext import CallbackQueryHandler, CallbackContext
@@ -295,7 +296,15 @@ def button(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
 
     resource = context.chat_data['resources'][query.data]
-    _, answer_message = resource.change_state(update.effective_user)
+    success, answer_message = resource.change_state(update.effective_user)
+
+    if not success:
+        message = f'@{resource.user.mention_html()},'\
+                  f' you acquire resource that another user needs:'\
+                  f' {update.effective_user.mention_html()}'
+        context.bot.sendMessage(update.effective_chat.id,
+                                message,
+                                parse_mode=ParseMode.HTML)
 
     # CallbackQueries need to be answered, even if no notification to the user is needed
     # Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
