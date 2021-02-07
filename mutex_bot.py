@@ -75,8 +75,8 @@ STANDARD_USER_MODE, REMOVING_USER_MODE = range(2)
 class Resource(object):
     def __init__(self, name: str):
         self._name = name
-        self._acquired: datetime = None
-        self._user: User = None
+        self._acquired: [datetime, None] = None
+        self._user: [User, None] = None
 
     @property
     def name(self):
