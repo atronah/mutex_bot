@@ -194,8 +194,13 @@ def start(update: Update, context: CallbackContext):
     if len(context.chat_data.get('resources', [])) == 0:
         update.message.reply_markdown('At first you must add resources by `/add_resource <resource_name>` command')
     else:
-        update.message.reply_text('Your resources',
-                                  reply_markup=build_keyboard(update=update, context=context))
+        messages_with_resources = context.chat_data.setdefault('messages_with_resources', [])
+        while messages_with_resources:
+            message = messages_with_resources.pop()
+            context.bot.delete_message(update.effective_chat.id, message.message_id)
+        message = update.message.reply_text('Your resources',
+                                            reply_markup=build_keyboard(update=update, context=context))
+        messages_with_resources.append(message)
 
 
 def help_command(update: Update, context: CallbackContext):
