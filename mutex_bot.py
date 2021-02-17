@@ -238,8 +238,9 @@ def add_resource(update: Update, context: CallbackContext):
     else:
         message = 'You have to specify a name of resource after the command'
 
-    update.message.reply_text(message,
-                              reply_markup=build_keyboard(update=update, context=context))
+    update.message.reply_text(message)
+
+    start(update, context)
 
 
 def remove_resource(update: Update, context: CallbackContext):
