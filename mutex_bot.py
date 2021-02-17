@@ -135,6 +135,24 @@ class Resource(object):
         return self.release(user) if self.acquired else self.acquire(user)
 
 
+class Group(object):
+    def __init__(self, name):
+        self._name = name
+        self._resources: Dict[str, Resource] = {}
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def display_name(self):
+        return self._name + ':'
+
+    @property
+    def resources(self):
+        return self._resources
+
+
 def recursive_update(target_dict, update_dict):
     if not isinstance(update_dict, dict):
         return target_dict
@@ -173,15 +191,25 @@ dispatcher = updater.dispatcher
 def build_keyboard(update: Update, context: CallbackContext) -> InlineKeyboardMarkup:
     if context.user_data.get('mode', STANDARD_USER_MODE) == REMOVING_USER_MODE:
         keyboard = ReplyKeyboardMarkup([
-                                           [k] for k in context.chat_data['resources'].keys()
+                                           ([k] if isinstance(v, Resource)
+                                            else [':'.join([k, gk])
+                                                  for gk in v.resources.keys()])
+                                           for k, v in context.chat_data['resources'].items()
                                        ] + [['/finish']],
                                        one_time_keyboard=True,
                                        selective=True)
     else:
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton(r.display_name, callback_data=k)]
-            for k, r in context.chat_data['resources'].items()
-        ])
+        rows = []
+        for k, v in context.chat_data['resources'].items():
+            if isinstance(v, Resource):
+                rows.append([InlineKeyboardButton(v.display_name, callback_data=k)])
+            elif isinstance(v, Group):
+                rows.append(
+                    [InlineKeyboardButton(v.display_name, callback_data=k)] +
+                    [InlineKeyboardButton(gv.display_name, callback_data=':'.join([k, gk]))
+                     for gk, gv in v.resources.items()]
+                )
+        keyboard = InlineKeyboardMarkup(rows)
     return keyboard
 
 
@@ -230,11 +258,18 @@ def add_resource(update: Update, context: CallbackContext):
 
     if context.args:
         resource_name = ' '.join(context.args)
+        group_name = None
+        if ':' in resource_name:
+            group_name, resource_name = resource_name.split(':')
+            resources = resources.setdefault(group_name, Group(group_name)).resources
+
         if resource_name in resources:
             message = f'Resource with the name "{context.args[0]}" already exists'
         else:
             resources[resource_name] = Resource(resource_name)
             message = f'Resource "{context.args[0]}" was added successfully'
+        if group_name:
+            message += f' in group "{group_name}"'
     else:
         message = 'You have to specify a name of resource after the command'
 
@@ -281,13 +316,23 @@ def finish(update: Update, context: CallbackContext):
 def other_messages(update, context):
     if context.user_data.get('mode', STANDARD_USER_MODE) == REMOVING_USER_MODE:
         resource_name = update.message.text
-        if resource_name not in context.chat_data.get('resources', {}):
+        if ':' in resource_name:
+            group_name, resource_name = resource_name.split(':')
+            group = context.chat_data.get('resources', {}).get(group_name, None)
+            resources = group.resources if group else {}
+        else:
+            group_name = None
+            resources = context.chat_data.get('resources', {})
+
+        if resource_name not in resources:
             answer_message = f'Unknown resource: {resource_name}'
         else:
-            resource = context.chat_data['resources'][resource_name]
+            resource = resources[resource_name]
             can_be_removed, _ = resource.release(update.effective_user)
             if can_be_removed:
-                del context.chat_data['resources'][resource_name]
+                del resources[resource_name]
+                if group_name and not resources:
+                    del context.chat_data['resources'][group_name]
                 answer_message = 'Removed'
             else:
                 answer_message = 'You cannot remove acquired resource.'
@@ -300,9 +345,18 @@ def other_messages(update, context):
 
 def button(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
+    answer_message = 'done'
 
-    resource = context.chat_data['resources'][query.data]
-    success, answer_message = resource.change_state(update.effective_user)
+    if ':' in query.data:
+        group_name, resource_name = query.data.split(':')
+        resource = context.chat_data['resources'][group_name].resources[resource_name]
+    else:
+        resource = context.chat_data['resources'][query.data]
+
+    if isinstance(resource, Resource):
+        success, answer_message = resource.change_state(update.effective_user)
+    else:
+        success, answer_message = True, 'No supported actions with group'
 
     if not success:
         message = f'@{resource.user.mention_html()},'\
@@ -314,7 +368,7 @@ def button(update: Update, context: CallbackContext) -> None:
 
     # CallbackQueries need to be answered, even if no notification to the user is needed
     # Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
-    query.answer(answer_message or 'done')
+    query.answer(answer_message)
     query.edit_message_text(text='Your resources', reply_markup=build_keyboard(update, context))
 
 
