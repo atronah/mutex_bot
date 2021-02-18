@@ -92,10 +92,13 @@ class Resource(object):
         return self._acquired
 
     @property
+    def state_mark(self):
+        return '🔴' if self._acquired else '⚪️'
+
+    @property
     def display_name(self) -> str:
-        state_mark = '🔴' if self._acquired else '⚪️'
         acquiring_info = f'({self._user.name})' if self._acquired else ''
-        return f'{state_mark} {self.name} {acquiring_info}'
+        return f'{self.state_mark} {self.name} {acquiring_info}'
 
     @property
     def data(self):
@@ -135,8 +138,9 @@ class Resource(object):
         return self.release(user) if self.acquired else self.acquire(user)
 
 
-class Group(object):
+class Group(dict):
     def __init__(self, name):
+        super().__init__()
         self._name = name
         self._resources: Dict[str, Resource] = {}
 
@@ -146,11 +150,19 @@ class Group(object):
 
     @property
     def display_name(self):
-        return self._name + ':'
+        resource_states = ''.join([r.state_mark for r in self.values()])
+        return f'{resource_states} [{self._name}]'
 
     @property
     def resources(self):
         return self._resources
+
+    @property
+    def data(self):
+        return {
+            'name': self.name,
+            'resources': dict(self)
+        }
 
 
 def recursive_update(target_dict, update_dict):
@@ -190,25 +202,29 @@ dispatcher = updater.dispatcher
 
 def build_keyboard(update: Update, context: CallbackContext) -> InlineKeyboardMarkup:
     if context.user_data.get('mode', STANDARD_USER_MODE) == REMOVING_USER_MODE:
-        keyboard = ReplyKeyboardMarkup([
-                                           ([k] if isinstance(v, Resource)
-                                            else [':'.join([k, gk])
-                                                  for gk in v.resources.keys()])
-                                           for k, v in context.chat_data['resources'].items()
-                                       ] + [['/finish']],
-                                       one_time_keyboard=True,
-                                       selective=True)
-    else:
         rows = []
         for k, v in context.chat_data['resources'].items():
-            if isinstance(v, Resource):
-                rows.append([InlineKeyboardButton(v.display_name, callback_data=k)])
-            elif isinstance(v, Group):
-                rows.append(
-                    [InlineKeyboardButton(v.display_name, callback_data=k)] +
-                    [InlineKeyboardButton(gv.display_name, callback_data=':'.join([k, gk]))
-                     for gk, gv in v.resources.items()]
-                )
+            if isinstance(v, Group):
+                for gk in v:
+                    rows.append([':'.join([k, gk])])
+            else:
+                rows.append([k])
+        rows.append(['/finish'])
+        keyboard = ReplyKeyboardMarkup(rows, one_time_keyboard=True, selective=True)
+    else:
+        rows = []
+        resources = context.chat_data['resources']
+        level = context.chat_data.get('level', '')
+        for resource_name in level.split('/')[1:]:
+            if resource_name in resources:
+                resources = resources[resource_name]
+
+        for k, v in resources.items():
+            rows.append([InlineKeyboardButton(v.display_name, callback_data=k)])
+
+        if level:
+            rows.append([InlineKeyboardButton('<', callback_data='_back')])
+
         keyboard = InlineKeyboardMarkup(rows)
     return keyboard
 
@@ -258,10 +274,12 @@ def add_resource(update: Update, context: CallbackContext):
 
     if context.args:
         resource_name = ' '.join(context.args)
+        if resource_name.startswith(('_', '<')):
+            resource_name = resource_name[1:]
         group_name = None
         if ':' in resource_name:
             group_name, resource_name = resource_name.split(':')
-            resources = resources.setdefault(group_name, Group(group_name)).resources
+            resources = resources.setdefault(group_name, Group(group_name))
 
         if resource_name in resources:
             message = f'Resource with the name "{context.args[0]}" already exists'
@@ -318,8 +336,7 @@ def other_messages(update, context):
         resource_name = update.message.text
         if ':' in resource_name:
             group_name, resource_name = resource_name.split(':')
-            group = context.chat_data.get('resources', {}).get(group_name, None)
-            resources = group.resources if group else {}
+            resources = context.chat_data.get('resources', {}).get(group_name, {})
         else:
             group_name = None
             resources = context.chat_data.get('resources', {})
@@ -345,18 +362,25 @@ def other_messages(update, context):
 
 def button(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
-    answer_message = 'done'
 
-    if ':' in query.data:
-        group_name, resource_name = query.data.split(':')
-        resource = context.chat_data['resources'][group_name].resources[resource_name]
+    if query.data == '_back':
+        context.chat_data['level'] = '/'.join(context.chat_data.get('level', '').split('/')[:-1])
+        success, answer_message = True, 'done'
     else:
-        resource = context.chat_data['resources'][query.data]
+        level = context.chat_data.get('level', '')
+        resources = context.chat_data['resources']
+        if '/' in level:
+            for resource_name in level.split('/')[1:]:
+                if resource_name in resources:
+                    resources = resources[resource_name]
 
-    if isinstance(resource, Resource):
-        success, answer_message = resource.change_state(update.effective_user)
-    else:
-        success, answer_message = True, 'No supported actions with group'
+        resource = resources[query.data]
+
+        if isinstance(resource, Group):
+            context.chat_data['level'] = '/'.join([level, query.data])
+            success, answer_message = True, 'done'
+        else:
+            success, answer_message = resource.change_state(update.effective_user)
 
     if not success:
         message = f'@{resource.user.mention_html()},'\
@@ -368,7 +392,7 @@ def button(update: Update, context: CallbackContext) -> None:
 
     # CallbackQueries need to be answered, even if no notification to the user is needed
     # Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
-    query.answer(answer_message)
+    query.answer(answer_message or 'done')
     query.edit_message_text(text='Your resources', reply_markup=build_keyboard(update, context))
 
 
