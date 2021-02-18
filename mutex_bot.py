@@ -360,7 +360,7 @@ def button(update: Update, context: CallbackContext) -> None:
 
     if not success:
         message = f'@{resource.user.mention_html()},'\
-                  f' you acquire resource that another user needs:'\
+                  f' you acquire the resource that another user needs:'\
                   f' {update.effective_user.mention_html()}'
         context.bot.sendMessage(update.effective_chat.id,
                                 message,
