@@ -1,0 +1,7 @@
+en:
+    re_acquired: re-acquired
+    already_acquired_by: The resource is already acquired by %{username}
+    cannot_release_acquired_by: You cannot release resource acquired by another user: %{username}
+    internal_exception: Internal exception: %{exception_info}
+    your_resources: Your resources
+    another_needs: %{owner}, you've acquired the resource that {requester} needs

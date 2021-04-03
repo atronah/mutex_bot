@@ -10,6 +10,7 @@ from telegram.ext import Updater, PicklePersistence
 from telegram.ext import CommandHandler, MessageHandler
 from telegram.ext import CallbackQueryHandler, CallbackContext
 from telegram.ext import Filters
+import i18n
 import yaml
 import logging
 import logging.config
@@ -73,6 +74,11 @@ settings: Dict[str, Dict[str, Any]] = {
 STANDARD_USER_MODE, REMOVING_USER_MODE = range(2)
 
 
+def tr(context, message_id, **kwargs):
+    i18n.set('locale', context.chat_data.get('lang', 'en')
+    return i18n.t(message_id, **kwargs)
+
+
 class Resource(object):
     def __init__(self, name: str):
         self._name = name
@@ -117,21 +123,21 @@ class Resource(object):
         if not self._acquired:
             self._acquired = datetime.now()
             self._user = user
-            return True, ''
+            return True, None
         elif self._user == user:
             self._acquired = datetime.now()
-            return True, 're-acquired'
-        return False, f'The resource is already acquired by {self.user.name}'
+            return True, ('common.re_acquired', {})
+        return False, ('common.already_acquired_by', dict(username=self.user.name))
 
     def release(self, user):
         # type: (User) -> tuple[bool, str]
         if not self.acquired:
-            return True, ''
+            return True, None
         elif self._user == user:
             self._acquired = None
             self._user = None
-            return True, ''
-        return False, f'You cannot release resource acquired by another user: {self.user.name}'
+            return True, None
+        return False, ('common.cannot_release_acquired_by', dict(username=self.user.name))
 
     def change_state(self, user):
         # type: (User) -> tuple[bool, str]
@@ -230,7 +236,7 @@ def build_keyboard(update: Update, context: CallbackContext) -> InlineKeyboardMa
 
 
 def error_handler(update: Update, context: CallbackContext):
-    update.message.reply_text(f'Internal exception: {str(context.error)}')
+    update.message.reply_text(tr(context, 'common.internal_exception', exception_info=str(context.error)))
     raise context.error
 
 
@@ -383,12 +389,15 @@ def button(update: Update, context: CallbackContext) -> None:
             context.chat_data['level'] = '/'.join([level, query.data])
             success, answer_message = True, 'done'
         else:
-            success, answer_message = resource.change_state(update.effective_user)
+            success, message_info = resource.change_state(update.effective_user)
+            if message_info:
+                message_id, kwargs = message_info
+                answer_message = tr(context, message_id, **kwargs)
+            else:
+                answer_message = ''
 
     if not success:
-        message = f'@{resource.user.mention_html()},'\
-                  f' you\'ve acquired the resource that another user needs:'\
-                  f' {update.effective_user.mention_html()}'
+        message = tr('common.another_needs', owner=resource.user.mention_html(), requester=update.effective_user.mention_html())
         context.bot.sendMessage(update.effective_chat.id,
                                 message,
                                 parse_mode=ParseMode.HTML)
@@ -396,7 +405,7 @@ def button(update: Update, context: CallbackContext) -> None:
     # CallbackQueries need to be answered, even if no notification to the user is needed
     # Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
     query.answer(answer_message or 'done')
-    query.edit_message_text(text='Your resources', reply_markup=build_keyboard(update, context))
+    query.edit_message_text(text=tr('common.your_resources'), reply_markup=build_keyboard(update, context))
 
 
 dispatcher.add_error_handler(error_handler)
@@ -409,6 +418,10 @@ dispatcher.add_handler(CommandHandler('import_chat_data', import_chat_data))
 dispatcher.add_handler(CommandHandler('finish', finish))
 dispatcher.add_handler(MessageHandler(Filters.all & ~Filters.status_update, other_messages))
 dispatcher.add_handler(CallbackQueryHandler(button))
+
+
+i18n.load_path.append('i18n')
+i18n.set('fallback', 'en')
 
 
 logging.info('start polling...')

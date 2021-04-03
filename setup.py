@@ -2,7 +2,8 @@ from setuptools import setup, find_packages
 
 requires = [
     'python-telegram-bot',
-    'pyyaml'
+    'pyyaml',
+    'python-i18n[YAML]'
 ]
 
 setup(
