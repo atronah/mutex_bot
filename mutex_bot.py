@@ -241,7 +241,10 @@ def start(update: Update, context: CallbackContext):
         messages_with_resources = context.chat_data.setdefault('messages_with_resources', [])
         while messages_with_resources:
             message = messages_with_resources.pop()
-            message.delete()
+            try:
+                message.delete()
+            except:
+                pass
         message = update.message.reply_text('Your resources',
                                             reply_markup=build_keyboard(update=update, context=context))
         messages_with_resources.append(message)
