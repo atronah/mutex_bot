@@ -1,0 +1,35 @@
+en:
+    re_acquired: "re-acquired"
+    already_acquired_by: "The resource is already acquired by %{username}"
+    cannot_release_acquired_by: "You cannot release resource acquired by another user: %{username}"
+    internal_exception: "Internal exception: %{exception_info}"
+    your_resources: "Your resources"
+    another_needs: "%{owner}, you've acquired the resource that %{requester} needs"
+    done: "done"
+    do_not_understand_and_logged: "I don't understand what you mean, that's why I've logged your message"
+    resource_removed: "Removed"
+    unknown_resource: "Unknown resource: %{resource_name}"
+    nothing_to_finish: "Nothing to finish"
+    maybe_later_dots: "Maybe later..."
+    nothing_to_export: "Nothing to export"
+    send_name_to_remove: "Send me the name of resource you would like to remove"
+    have_to_specify_resource_name: "You have to specify a name of resource after the command"
+    in_group_name: 'in group "%{group_name}"'
+    resource_successfully_added: 'Resource "%{resource_name}" was added successfully'
+    help: |
+        That bot helps to manage resources with exclusive access.
+        It allows you to see which ones are busy and which ones are free and change that its state just by tap on them in resources list
+
+        Available commands:
+
+        - /start - Starts the bot or/and shows the status of resources
+        - /help - Shows that message
+        - /add_resource `<name>` - Adds new resource with name `<name>` to resources list of that chat
+        - /remove_resource - Switches the user to removing mode when he can remove one or more resources just send theit names to bot by using special keyboard
+        - /export_chat_data - Sends to chat .yml file with resources and its states
+        - /import_chat_data - (not implemented) loads resources with ots states from .yml file which was sent to the chat after that command
+        - /lang `<code>` - Switches bot language specified by `<code>` (supports `en` and `ru` codes)
+    first_add_resource: "At first you must add resources by `/add_resource <resource_name>` command"
+    cannot_remove_acquired_resource: "You cannot remove acquired resource."
+    finished: "Finished"
+    lang_changed: "Language has been changed"
