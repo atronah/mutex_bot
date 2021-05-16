@@ -74,8 +74,8 @@ settings: Dict[str, Dict[str, Any]] = {
 STANDARD_USER_MODE, REMOVING_USER_MODE = range(2)
 
 
-def tr(context, message_id, **kwargs):
-    i18n.set('locale', context.chat_data.get('lang', 'en')
+def tr(context: object, message_id: object, **kwargs: object) -> object:
+    i18n.set('locale', context.chat_data.get('lang', 'en'))
     return i18n.t(message_id, **kwargs)
 
 
@@ -119,7 +119,7 @@ class Resource(object):
         }
 
     def acquire(self, user):
-        # type: (User) -> tuple[bool, str]
+        # type: (User) -> tuple[bool, tuple[str, dict] or None]
         if not self._acquired:
             self._acquired = datetime.now()
             self._user = user
@@ -130,7 +130,7 @@ class Resource(object):
         return False, ('common.already_acquired_by', dict(username=self.user.name))
 
     def release(self, user):
-        # type: (User) -> tuple[bool, str]
+        # type: (User) -> tuple[bool, tuple[str, dict] or None]
         if not self.acquired:
             return True, None
         elif self._user == user:
@@ -140,7 +140,7 @@ class Resource(object):
         return False, ('common.cannot_release_acquired_by', dict(username=self.user.name))
 
     def change_state(self, user):
-        # type: (User) -> tuple[bool, str]
+        # type: (User) -> tuple[bool, tuple[str, dict] or None]
         return self.release(user) if self.acquired else self.acquire(user)
 
 
@@ -242,7 +242,7 @@ def error_handler(update: Update, context: CallbackContext):
 
 def start(update: Update, context: CallbackContext):
     if len(context.chat_data.get('resources', [])) == 0:
-        update.message.reply_markdown('At first you must add resources by `/add_resource <resource_name>` command')
+        update.message.reply_markdown(tr(context, 'common.first_add_resource'))
     else:
         messages_with_resources = context.chat_data.setdefault('messages_with_resources', [])
         while messages_with_resources:
@@ -251,28 +251,13 @@ def start(update: Update, context: CallbackContext):
                 message.delete()
             except:
                 pass
-        message = update.message.reply_text('Your resources',
+        message = update.message.reply_text(tr(context, 'common.your_resources'),
                                             reply_markup=build_keyboard(update=update, context=context))
         messages_with_resources.append(message)
 
 
 def help_command(update: Update, context: CallbackContext):
-    help_message = 'That bot helps to manage resources with exclusive access.\n' \
-                   'It allows you to see which ones are busy and which ones are free' \
-                   ' and change that its state just by tap on them in resources list\n' \
-                   '\n' \
-                   'Available commands:\n' \
-                   '\n' \
-                   '- /start - Starts the bot or/and shows the status of resources\n' \
-                   '- /help - Shows that message\n' \
-                   '- /add_resource `<name>` - Adds new resource with name `<name>`' \
-                   ' to resources list of that chat\n' \
-                   '- /remove_resource - Switches the user to removing mode' \
-                   ' when he can remove one or more resources' \
-                   ' just send theit names to bot by using special keyboard \n' \
-                   '- /export_chat_data - Sends to chat .yml file with resources and its states\n' \
-                   '- /import_chat_data - (not implemented) loads resources with ots states' \
-                   ' from .yml file which was sent to the chat after that command\n'
+    help_message = tr(context, 'common.help')
     escape_chars = r'_*[]()~>#+-=|{}.!'
     help_message = re.sub(f'([{re.escape(escape_chars)}])', r'\\\1', help_message)
     update.message.reply_markdown_v2(help_message)
@@ -294,11 +279,11 @@ def add_resource(update: Update, context: CallbackContext):
             message = f'Resource with the name "{context.args[0]}" already exists'
         else:
             resources[resource_name] = Resource(resource_name)
-            message = f'Resource "{context.args[0]}" was added successfully'
+            message = tr(context, 'common.resource_successfully_added', resource_name=context.args[0])
         if group_name:
-            message += f' in group "{group_name}"'
+            message += ' ' + tr(context, 'common.in_group_name', group_name=group_name)
     else:
-        message = 'You have to specify a name of resource after the command'
+        message = tr(context, 'common.have_to_specify_resource_name')
 
     update.message.reply_text(message)
 
@@ -307,7 +292,7 @@ def add_resource(update: Update, context: CallbackContext):
 
 def remove_resource(update: Update, context: CallbackContext):
     context.user_data['mode'] = REMOVING_USER_MODE
-    update.message.reply_text('Send me the name of resource you would like to remove',
+    update.message.reply_text(tr(context, 'common.send_name_to_remove'),
                               reply_markup=build_keyboard(update=update, context=context))
 
 
@@ -324,20 +309,20 @@ def export_chat_data(update: Update, context: CallbackContext):
         update.message.reply_document(document=string_stream,
                                       filename=filename)
     else:
-        update.message.reply_text('Nothing to export')
+        update.message.reply_text(tr(context, 'common.nothing_to_export'))
 
 
 def import_chat_data(update: Update, context: CallbackContext):
-    update.message.reply_text('Maybe later... ')
+    update.message.reply_text(tr(context, 'common.maybe_later_dots'))
 
 
 def finish(update: Update, context: CallbackContext):
     if context.user_data.get('mode', STANDARD_USER_MODE) != STANDARD_USER_MODE:
         context.user_data['mode'] = STANDARD_USER_MODE
-        update.message.reply_text('Finished', reply_markup=ReplyKeyboardRemove())
+        update.message.reply_text(tr(context, 'common.finished'), reply_markup=ReplyKeyboardRemove())
         start(update, context)
     else:
-        update.message.reply_text('Nothing to finish')
+        update.message.reply_text(tr(context, 'common.nothing_to_finish'))
 
 
 def other_messages(update, context):
@@ -351,7 +336,7 @@ def other_messages(update, context):
             resources = context.chat_data.get('resources', {})
 
         if resource_name not in resources:
-            answer_message = f'Unknown resource: {resource_name}'
+            answer_message = tr(context, 'common.unknown_resource', resource_name=resource_name)
         else:
             resource = resources[resource_name]
             can_be_removed, _ = resource.release(update.effective_user)
@@ -359,14 +344,14 @@ def other_messages(update, context):
                 del resources[resource_name]
                 if group_name and not resources:
                     del context.chat_data['resources'][group_name]
-                answer_message = 'Removed'
+                answer_message = tr(context, 'common.resource_removed')
             else:
-                answer_message = 'You cannot remove acquired resource.'
+                answer_message = tr(context, 'common.cannot_remove_acquired_resource')
         update.message.reply_text(answer_message, reply_markup=build_keyboard(update, context))
     else:
         logger = logging.getLogger('unknown_messages')
         logger.debug(f'{update.effective_user.id} {update.message.text}')
-        update.message.reply_text("I don't understand what you mean, that's why I've logged your message")
+        update.message.reply_text(tr(context, 'common.do_not_understand_and_logged'))
 
 
 def button(update: Update, context: CallbackContext) -> None:
@@ -374,7 +359,7 @@ def button(update: Update, context: CallbackContext) -> None:
 
     if query.data == '_back':
         context.chat_data['level'] = '/'.join(context.chat_data.get('level', '').split('/')[:-1])
-        success, answer_message = True, 'done'
+        success, answer_message = True, tr(context, 'common.done')
     else:
         level = context.chat_data.get('level', '')
         resources = context.chat_data['resources']
@@ -387,7 +372,7 @@ def button(update: Update, context: CallbackContext) -> None:
 
         if isinstance(resource, Group):
             context.chat_data['level'] = '/'.join([level, query.data])
-            success, answer_message = True, 'done'
+            success, answer_message = True, tr(context, 'common.done')
         else:
             success, message_info = resource.change_state(update.effective_user)
             if message_info:
@@ -397,15 +382,26 @@ def button(update: Update, context: CallbackContext) -> None:
                 answer_message = ''
 
     if not success:
-        message = tr('common.another_needs', owner=resource.user.mention_html(), requester=update.effective_user.mention_html())
+        message = tr(context,
+                     'common.another_needs',
+                     owner=resource.user.mention_html(),
+                     requester=update.effective_user.mention_html())
         context.bot.sendMessage(update.effective_chat.id,
                                 message,
                                 parse_mode=ParseMode.HTML)
 
     # CallbackQueries need to be answered, even if no notification to the user is needed
     # Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
-    query.answer(answer_message or 'done')
-    query.edit_message_text(text=tr('common.your_resources'), reply_markup=build_keyboard(update, context))
+    query.answer(answer_message or tr(context, 'common.done'))
+    query.edit_message_text(text=tr(context, 'common.your_resources'), reply_markup=build_keyboard(update, context))
+
+
+def lang(update: Update, context: CallbackContext) -> None:
+    if context.args:
+        context.chat_data['lang'] = context.args[0]
+        update.message.reply_text(tr(context, 'common.lang_changed'))
+    start(update, context)
+
 
 
 dispatcher.add_error_handler(error_handler)
@@ -416,6 +412,7 @@ dispatcher.add_handler(CommandHandler('remove_resource', remove_resource))
 dispatcher.add_handler(CommandHandler('export_chat_data', export_chat_data))
 dispatcher.add_handler(CommandHandler('import_chat_data', import_chat_data))
 dispatcher.add_handler(CommandHandler('finish', finish))
+dispatcher.add_handler(CommandHandler('lang', lang))
 dispatcher.add_handler(MessageHandler(Filters.all & ~Filters.status_update, other_messages))
 dispatcher.add_handler(CallbackQueryHandler(button))
 
