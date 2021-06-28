@@ -385,7 +385,8 @@ def button(update: Update, context: CallbackContext) -> None:
         message = tr(context,
                      'common.another_needs',
                      owner=resource.user.mention_html(),
-                     requester=update.effective_user.mention_html())
+                     requester=update.effective_user.mention_html(),
+                     resource_name=query.data)
         context.bot.sendMessage(update.effective_chat.id,
                                 message,
                                 parse_mode=ParseMode.HTML)
