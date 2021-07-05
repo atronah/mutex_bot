@@ -148,7 +148,6 @@ class Group(dict):
     def __init__(self, name):
         super().__init__()
         self._name = name
-        self._resources: Dict[str, Resource] = {}
 
     @property
     def name(self):
@@ -161,7 +160,7 @@ class Group(dict):
 
     @property
     def resources(self):
-        return self._resources
+        return self.values()
 
     @property
     def data(self):
