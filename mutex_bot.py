@@ -23,7 +23,8 @@ from telegram.utils import helpers
 
 settings: Dict[str, Dict[str, Any]] = {
     'access': {
-        'token': None
+        'token': None,
+        'admin_user_list': []
     },
     'persistence': {
         'filename': 'mutex_bot.data'
@@ -143,6 +144,10 @@ class Resource(object):
         # type: (User) -> tuple[bool, tuple[str, dict] or None]
         return self.release(user) if self.acquired else self.acquire(user)
 
+    def force_cleanup(self):
+        self._acquired: [datetime, None] = None
+        self._user: [User, None] = None
+
 
 class Group(dict):
     def __init__(self, name):
@@ -168,6 +173,10 @@ class Group(dict):
             'name': self.name,
             'resources': dict(self)
         }
+
+    def force_cleanup(self):
+        for r in self.resources:
+            r.force_cleanup()
 
 
 def recursive_update(target_dict, update_dict):
@@ -403,6 +412,15 @@ def lang(update: Update, context: CallbackContext) -> None:
     start(update, context)
 
 
+def force_cleanup(update: Update, context: CallbackContext) -> None:
+    if update.effective_user.id in settings['access'].get('admin_user_list', []):
+        for r in context.chat_data['resources'].values():
+            print(f'clean {r.name} ({type(r)})')
+            r.force_cleanup()
+        start(update, context)
+    else:
+        update.message.reply_text(tr(context, 'common.admin_rights_required'))
+
 
 dispatcher.add_error_handler(error_handler)
 dispatcher.add_handler(CommandHandler('start', start))
@@ -413,6 +431,7 @@ dispatcher.add_handler(CommandHandler('export_chat_data', export_chat_data))
 dispatcher.add_handler(CommandHandler('import_chat_data', import_chat_data))
 dispatcher.add_handler(CommandHandler('finish', finish))
 dispatcher.add_handler(CommandHandler('lang', lang))
+dispatcher.add_handler(CommandHandler('force_cleanup', force_cleanup))
 dispatcher.add_handler(MessageHandler(Filters.all & ~Filters.status_update, other_messages))
 dispatcher.add_handler(CallbackQueryHandler(button))
 

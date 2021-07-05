@@ -1,7 +1,7 @@
 ru:
     re_acquired: "Занят повторно"
     already_acquired_by: "Ресурс уже занят %{username}"
-    cannot_release_acquired_by: "Освободить можно только ресурсы, занятые Вами"
+    cannot_release_acquired_by: "Освободить можно только ресурсы, занятые Вами, %{username}"
     internal_exception: "Внутренняя ошибка: %{exception_info}"
     your_resources: "Ваши ресурсы"
     another_needs: "%{owner}, пользователь %{requester} нуждается в занятом Вами ресурсе %{resource_name}"
@@ -29,7 +29,9 @@ ru:
         - /export_chat_data - Бот отправляет в чат .yml файл с ресурсами и их статусами
         - /import_chat_data - (не реализовано) загружает ресурсы и их состояния из .yml файла, отправленного пользователем в чат после выполнения этой команды
         - /lang `<code>` - Меняет язык бота на указанный в `<code>` (поддерживаются `en` и `ru` коды языков)
+        - /force_cleanup - Принудитель освобождает все ресурсы (выполнять команду могут только пользователи с правами админа, указанные в `conf.yaml` бота)
     first_add_resource: "Для начала Вы должны добавить ресурс командой `/add_resource <resource_name>`"
     cannot_remove_acquired_resource: "Нельзя удалить занятый ресурс."
     finished: "Завершено"
     lang_changed: "Язык был изменен"
+    admin_rights_required: "У Вас нет прав администратора"

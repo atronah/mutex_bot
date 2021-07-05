@@ -29,7 +29,9 @@ en:
         - /export_chat_data - Sends to chat .yml file with resources and its states
         - /import_chat_data - (not implemented) loads resources with ots states from .yml file which was sent to the chat after that command
         - /lang `<code>` - Switches bot language specified by `<code>` (supports `en` and `ru` codes)
+        - /force_cleanup - Force release all resources (only admin users specified in bot `conf.yaml` can use it)
     first_add_resource: "At first you must add resources by `/add_resource <resource_name>` command"
     cannot_remove_acquired_resource: "You cannot remove acquired resource."
     finished: "Finished"
     lang_changed: "Language has been changed"
+    admin_rights_required: "You have no admin rights"
