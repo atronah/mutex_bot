@@ -4,18 +4,18 @@ ru:
     cannot_release_acquired_by: "Освободить можно только ресурсы, занятые Вами, %{username}"
     internal_exception: "Внутренняя ошибка: %{exception_info}"
     your_resources: "Ваши ресурсы"
-    another_needs: "%{owner}, пользователь %{requester} нуждается в занятом Вами ресурсе %{resource_name}"
+    another_needs: '%{owner}, пользователь %{requester} нуждается в занятом Вами ресурсе "%{resource_full_name}"'
     done: "Успешно"
     do_not_understand_and_logged: "Я не понимаю, что Вы имеете в виду, поэтому я сохраню Ваше сообщение"
     resource_removed: "Удалено"
-    unknown_resource: "Неизвестный ресурс: %{resource_name}"
+    unknown_resource: "Неизвестный ресурс: %{resource_full_name}"
     nothing_to_finish: "Нет действия для завершения"
     maybe_later_dots: "Может позже..."
     nothing_to_export: "Нечего экспортировать"
     send_name_to_remove: "Отправьте мне имя ресурса, который вы хотите удалить"
     have_to_specify_resource_name: "Необходимо указать имя ресурса после команды"
     in_group_name: 'в группе "%{group_name}"'
-    resource_successfully_added: 'Ресурс "%{resource_name}" был успешно добавлен'
+    resource_successfully_added: 'Ресурс "%{resource_full_name}" был успешно добавлен'
     help: |
         Данный бот помогает отслеживать доступность ресурсов, с которыми попеременно работают несколько человек.
         Он позволяет вам видеть, какие ресурсы в данным момент свободны, какие - заняты и кем заняты, а также занимать свободные ресурсы и особождать занятые Вами.
