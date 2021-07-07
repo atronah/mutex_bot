@@ -283,15 +283,16 @@ def add_resource(update: Update, context: CallbackContext):
         if resource_name.startswith(('_', '<')):
             resource_name = resource_name[1:]
         group_name = None
+        resource_full_name = resource_name
         if ':' in resource_name:
             group_name, resource_name = resource_name.split(':')
             resources = resources.setdefault(group_name, Group(group_name))
 
         if resource_name in resources:
-            message = f'Resource with the name "{context.args[0]}" already exists'
+            message = f'Resource with the name "{resource_full_name}" already exists'
         else:
             resources[resource_name] = Resource(resource_name)
-            message = tr(context, 'common.resource_successfully_added', resource_name=context.args[0])
+            message = tr(context, 'common.resource_successfully_added', resource_full_name=resource_full_name)
         if group_name:
             message += ' ' + tr(context, 'common.in_group_name', group_name=group_name)
     else:
@@ -339,7 +340,7 @@ def finish(update: Update, context: CallbackContext):
 
 def other_messages(update, context):
     if context.user_data.get('mode', STANDARD_USER_MODE) == REMOVING_USER_MODE:
-        resource_name = update.message.text
+        resource_full_name = resource_name = update.message.text
         if ':' in resource_name:
             group_name, resource_name = resource_name.split(':')
             resources = context.chat_data.get('resources', {}).get(group_name, {})
@@ -348,7 +349,7 @@ def other_messages(update, context):
             resources = context.chat_data.get('resources', {})
 
         if resource_name not in resources:
-            answer_message = tr(context, 'common.unknown_resource', resource_name=resource_name)
+            answer_message = tr(context, 'common.unknown_resource', resource_full_name=resource_full_name)
         else:
             resource = resources[resource_name]
             can_be_removed, _ = resource.release(update.effective_user)
@@ -375,10 +376,15 @@ def button(update: Update, context: CallbackContext) -> None:
     else:
         level = context.chat_data.get('level', '')
         resources = context.chat_data['resources']
+        resource_full_name = query.data
         if '/' in level:
+            resource_list = []
             for resource_name in level.split('/')[1:]:
                 if resource_name in resources:
+                    resource_list.append(resource_name)
                     resources = resources[resource_name]
+            resource_list.append(resource_full_name)
+            resource_full_name = ':'.join([resource_list] + [])
 
         resource = resources[query.data]
 
@@ -398,7 +404,7 @@ def button(update: Update, context: CallbackContext) -> None:
                      'common.another_needs',
                      owner=resource.user.mention_html(),
                      requester=update.effective_user.mention_html(),
-                     resource_name=query.data)
+                     resource_full_name=resource_full_name)
         context.bot.sendMessage(update.effective_chat.id,
                                 message,
                                 parse_mode=ParseMode.HTML)
