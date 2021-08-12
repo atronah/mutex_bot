@@ -402,7 +402,8 @@ def button(update: Update, context: CallbackContext) -> None:
     # CallbackQueries need to be answered, even if no notification to the user is needed
     # Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
     query.answer(answer_message or tr(context, 'common.done'))
-    query.edit_message_text(text=tr(context, 'common.your_resources'), reply_markup=build_keyboard(update, context))
+    if success:
+        query.edit_message_text(text=tr(context, 'common.your_resources'), reply_markup=build_keyboard(update, context))
 
 
 def lang(update: Update, context: CallbackContext) -> None:
