@@ -1,18 +1,25 @@
-run_file="mutex_bot.py"
-venv_dir="../mutex_bot_venv"
+#! /usr/bin/env bash
 
-pkill -f "python3 ${run_file}"
+script_path="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )" 
 
-if [ ! -d "${venv_dir}" ]; then
-    echo "create virtual env in ${venv_dir}"
-    python3 -m venv ${venv_dir}
-    pip install --upgrade pip setuptools wheel
+# " <- extra double quote to fix incorect parsing nested double quotes in previous command by some editors
+
+
+# full path to prevent killing any other bots with `bot.py` main script
+run_command="python3 ${script_path}/mutex_bot.py"
+
+pkill -f "${run_command}"
+
+pushd "${script_path}"
+
+if [ ! -d "venv" ]; then
+    python3 -m venv venv
 fi
 
-if [ -d ${venv_dir} ]; then
-    source "${venv_dir}/bin/activate"
-    # pip install .
-    python3 ${run_file}
-else
-    echo "no virtual env"
-fi
+source ./venv/bin/activate
+pip install --upgrade pip setuptools
+pip install .
+
+nohup "${run_command}" &
+
+popd
