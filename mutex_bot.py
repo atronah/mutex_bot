@@ -369,6 +369,7 @@ def other_messages(update, context):
 
 def button(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
+    resource_full_name = ''
 
     if query.data == '_back':
         context.chat_data['level'] = '/'.join(context.chat_data.get('level', '').split('/')[:-1])
