@@ -384,7 +384,7 @@ def button(update: Update, context: CallbackContext) -> None:
                     resource_list.append(resource_name)
                     resources = resources[resource_name]
             resource_list.append(resource_full_name)
-            resource_full_name = ':'.join([resource_list] + [])
+            resource_full_name = ':'.join(resource_list)
 
         resource = resources[query.data]
 
