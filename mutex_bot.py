@@ -245,9 +245,9 @@ def build_keyboard(update: Update, context: CallbackContext) -> InlineKeyboardMa
 
 def error_handler(update: Update, context: CallbackContext):
     exception_info = str(context.error)
-    # import traceback
-    # exception_info += os.linesep
-    # exception_info += traceback.format_exc()
+    import traceback
+    exception_info += os.linesep
+    exception_info += traceback.format_exc()
     context.bot.sendMessage(update.effective_chat.id, tr(context, 'common.internal_exception', exception_info=exception_info))
     raise context.error
 
