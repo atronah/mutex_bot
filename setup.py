@@ -19,6 +19,6 @@ setup(
     packages=find_packages(),
     install_requires=requires,
     entry_points={'console_scripts': [
-        'mutex_bot = mutex_bot:main',
+        'mutex_bot = mutex_bot.bot:main',
     ]},
 )
