@@ -11,9 +11,8 @@ if [ ! -d "venv" ]; then
 fi
 
 source ./venv/bin/activate
-pip install --upgrade pip setuptools wheel
-pip install .
-
+pip3 install --upgrade pip setuptools wheel
+pip3 install .
 
 nohup mutex_bot &
 
