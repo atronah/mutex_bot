@@ -2,7 +2,7 @@
 
 script_path="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
-pkill -f "${run_command}"
+pkill -f "mutex_bot"
 
 pushd "${script_path}"
 
