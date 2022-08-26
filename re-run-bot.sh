@@ -7,12 +7,7 @@ pkill -f "${run_command}"
 pushd "${script_path}"
 
 if [ ! -d "venv" ]; then
-    if ! command -v python3.7 &> /dev/null
-    then
-        python3.7 -m venv venv
-    else
-        python3 -m venv venv
-    fi
+    python3 -m venv venv
 fi
 
 source ./venv/bin/activate
