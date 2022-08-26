@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-script_path="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )" 
+script_path="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
 # " <- extra double quote to fix incorect parsing nested double quotes in previous command by some editors
 
@@ -17,7 +17,7 @@ if [ ! -d "venv" ]; then
 fi
 
 source ./venv/bin/activate
-pip install --upgrade pip setuptools
+pip install --upgrade pip setuptools wheel
 pip install .
 
 nohup "${run_command}" &
