@@ -6,6 +6,9 @@ pkill -f "mutex_bot"
 
 pushd "${script_path}"
 
+git reset --hard HEAD
+git pull
+
 if [ ! -d "venv" ]; then
     python3 -m venv venv
 fi
