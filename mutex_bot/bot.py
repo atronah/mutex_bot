@@ -1,25 +1,19 @@
 import collections.abc
 import io
-import os
-import re
-from typing import Dict, Any
-
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, User, ReplyKeyboardMarkup, ReplyKeyboardRemove, \
-    ParseMode
-from telegram.ext import Updater, PicklePersistence
-from telegram.ext import CommandHandler, MessageHandler
-from telegram.ext import CallbackQueryHandler, CallbackContext
-from telegram.ext import Filters
-import i18n
-import yaml
 import logging
 import logging.config
-import sys
+import os
+import re
 from datetime import datetime
+from typing import Dict, Any
 
+import i18n
+import yaml
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, \
+    ParseMode
+from telegram.ext import CallbackContext
 
-# default settings
-from telegram.utils import helpers
+from mutex_bot.resource import Group, Resource
 
 settings: Dict[str, Dict[str, Any]] = {
     'access': {
@@ -78,105 +72,6 @@ STANDARD_USER_MODE, REMOVING_USER_MODE = range(2)
 def tr(context: object, message_id: object, **kwargs: object) -> object:
     i18n.set('locale', context.chat_data.get('lang', 'en'))
     return i18n.t(message_id, **kwargs)
-
-
-class Resource(object):
-    def __init__(self, name: str):
-        self._name = name
-        self._acquired: [datetime, None] = None
-        self._user: [User, None] = None
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def user(self):
-        return self._user
-
-    @property
-    def acquired(self):
-        return self._acquired
-
-    @property
-    def state_mark(self):
-        return '🔴' if self._acquired else '⚪️'
-
-    @property
-    def display_name(self) -> str:
-        acquiring_info = f'({self._user.name})' if self._acquired else ''
-        return f'{self.state_mark} {self.name} {acquiring_info}'
-
-    @property
-    def data(self):
-        return {
-            'name': self.name,
-            'acquired': self.acquired,
-            'user': {
-                'id': self.user.id,
-                'username': self.user.username,
-                'fullname': self.user.full_name,
-            }
-        }
-
-    def acquire(self, user):
-        # type: (User) -> tuple[bool, tuple[str, dict] or None]
-        if not self._acquired:
-            self._acquired = datetime.now()
-            self._user = user
-            return True, None
-        elif self._user == user:
-            self._acquired = datetime.now()
-            return True, ('common.re_acquired', {})
-        return False, ('common.already_acquired_by', dict(username=self.user.name))
-
-    def release(self, user):
-        # type: (User) -> tuple[bool, tuple[str, dict] or None]
-        if not self.acquired:
-            return True, None
-        elif self._user == user:
-            self._acquired = None
-            self._user = None
-            return True, None
-        return False, ('common.cannot_release_acquired_by', dict(username=self.user.name))
-
-    def change_state(self, user):
-        # type: (User) -> tuple[bool, tuple[str, dict] or None]
-        return self.release(user) if self.acquired else self.acquire(user)
-
-    def force_cleanup(self):
-        self._acquired: [datetime, None] = None
-        self._user: [User, None] = None
-
-
-class Group(dict):
-    def __init__(self, name):
-        super().__init__()
-        self._name = name
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def display_name(self):
-        resource_states = ''.join([r.state_mark for r in self.values()])
-        return f'{resource_states} [{self._name}]'
-
-    @property
-    def resources(self):
-        return self.values()
-
-    @property
-    def data(self):
-        return {
-            'name': self.name,
-            'resources': dict(self)
-        }
-
-    def force_cleanup(self):
-        for r in self.resources:
-            r.force_cleanup()
 
 
 def recursive_update(target_dict, update_dict):
@@ -409,55 +304,3 @@ def force_cleanup(update: Update, context: CallbackContext) -> None:
         start(update, context)
     else:
         update.message.reply_text(tr(context, 'common.admin_rights_required'))
-
-
-
-def main():
-    if os.path.exists('conf.yml'):
-        with open('conf.yml', 'rt') as conf:
-            recursive_update(settings, yaml.safe_load(conf))
-    else:
-        with open('conf.yml', 'wt') as conf:
-            yaml.dump(settings, conf)
-
-    logging.config.dictConfig(settings['logging']) 
-
-    if not settings['access']['token']:
-        logging.error('Empty bot token in conf.yml (`access/token`)')
-        sys.exit(1)
-
-    if not settings['persistence']['filename']:
-        logging.error('Empty filename fot persistence in conf.yml (`persistence/filename`)')
-        sys.exit(1)
-
-
-    pp = PicklePersistence(settings['persistence']['filename'])
-    updater = Updater(token=settings['access']['token'], persistence=pp, use_context=True)
-    dispatcher = updater.dispatcher
-
-
-    dispatcher.add_error_handler(error_handler)
-    dispatcher.add_handler(CommandHandler('start', start))
-    dispatcher.add_handler(CommandHandler('help', help_command))
-    dispatcher.add_handler(CommandHandler('add_resource', add_resource))
-    dispatcher.add_handler(CommandHandler('remove_resource', remove_resource))
-    dispatcher.add_handler(CommandHandler('export_chat_data', export_chat_data))
-    dispatcher.add_handler(CommandHandler('import_chat_data', import_chat_data))
-    dispatcher.add_handler(CommandHandler('finish', finish))
-    dispatcher.add_handler(CommandHandler('lang', lang))
-    dispatcher.add_handler(CommandHandler('force_cleanup', force_cleanup))
-    dispatcher.add_handler(MessageHandler(Filters.all & ~Filters.status_update, other_messages))
-    dispatcher.add_handler(CallbackQueryHandler(button))
-
-
-    i18n.load_path.append('i18n')
-    i18n.set('fallback', 'en')
-
-
-    logging.info('start polling...')
-    updater.start_polling()
-    updater.idle()
-
-
-if __name__ == '__main__':
-    main()
