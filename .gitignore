@@ -4,3 +4,5 @@
 .idea/**
 mutex_bot.egg-info/**
 venv/**
+.DS_Store
+/build/
