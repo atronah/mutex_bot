@@ -69,7 +69,7 @@ settings: Dict[str, Dict[str, Any]] = {
 STANDARD_USER_MODE, REMOVING_USER_MODE = range(2)
 
 
-def tr(context: object, message_id: object, **kwargs: object) -> object:
+def tr(context: object, message_id: object, **kwargs: object) -> str:
     i18n.set('locale', context.chat_data.get('lang', 'en'))
     return i18n.t(message_id, **kwargs)
 
