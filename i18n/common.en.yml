@@ -3,7 +3,7 @@ en:
     already_acquired_by: "The resource is already acquired by %{username}"
     cannot_release_acquired_by: "You cannot release resource acquired by another user: %{username}"
     internal_exception: "Internal exception: %{exception_info}"
-    your_resources: "Your resources"
+    your_resources: "Your resources (%{current_datetime})"
     another_needs: '%{owner}, user %{requester} needs the resource "%{resource_full_name}" that you use'
     done: "done"
     do_not_understand_and_logged: "I don't understand what you mean, that's why I've logged your message"

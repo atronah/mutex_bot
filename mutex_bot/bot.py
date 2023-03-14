@@ -74,6 +74,10 @@ def tr(context: object, message_id: object, **kwargs: object) -> str:
     return i18n.t(message_id, **kwargs)
 
 
+def current_datetime():
+    return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+
 def recursive_update(target_dict, update_dict):
     if not isinstance(update_dict, dict):
         return target_dict
@@ -144,7 +148,7 @@ def start(update: Update, context: CallbackContext):
                 message.delete()
             except:
                 pass
-        message = update.message.reply_text(tr(context, 'common.your_resources'),
+        message = update.message.reply_text(tr(context, 'common.your_resources', current_datetime=current_datetime()),
                                             reply_markup=build_keyboard(update=update, context=context))
         messages_with_resources.append(message)
 
@@ -295,7 +299,8 @@ def button(update: Update, context: CallbackContext) -> None:
     # Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
     query.answer(answer_message or tr(context, 'common.done'))
     if success:
-        query.edit_message_text(text=tr(context, 'common.your_resources'), reply_markup=build_keyboard(update, context))
+        query.edit_message_text(text=tr(context, 'common.your_resources', current_datetime=current_datetime()),
+                                reply_markup=build_keyboard(update, context))
 
 
 def lang(update: Update, context: CallbackContext) -> None:

@@ -3,7 +3,7 @@ ru:
     already_acquired_by: "Ресурс уже занят %{username}"
     cannot_release_acquired_by: "Освободить можно только ресурсы, занятые Вами, %{username}"
     internal_exception: "Внутренняя ошибка: %{exception_info}"
-    your_resources: "Ваши ресурсы"
+    your_resources: "Ваши ресурсы (%{current_datetime})"
     another_needs: '%{owner}, пользователь %{requester} нуждается в занятом Вами ресурсе "%{resource_full_name}"'
     done: "Успешно"
     do_not_understand_and_logged: "Я не понимаю, что Вы имеете в виду, поэтому я сохраню Ваше сообщение"
