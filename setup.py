@@ -1,8 +1,8 @@
 from setuptools import setup, find_packages
 
 requires = [
-    'python-telegram-bot; python_version >= "3.7"',
-    'python-telegram-bot <= 13.7 ; python_version < "3.7"',
+    'python-telegram-bot',
+    'sqlalchemy',
     'pyyaml',
     'python-i18n[YAML]'
 ]
