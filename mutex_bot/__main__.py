@@ -17,8 +17,8 @@ with open(CONF_FILENAME, 'rt') as conf:
     config = yaml.safe_load(conf)
 
 
-engine = create_engine('sqlite:///:memory:', echo=True)
-sessionmaker = session_maker(engine)
+# engine = create_engine('sqlite:///:memory:', echo=True)
+# sessionmaker = sessionmaker(engine)
 
 # logging.config.dictConfig(config['logging'])
 # defaults = Defaults(parse_mode=ParseMode.MARKDOWN_V2)
