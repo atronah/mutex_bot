@@ -288,8 +288,8 @@ def button(update: Update, context: CallbackContext) -> None:
     if not success:
         message = tr(context,
                      'common.another_needs',
-                     owner=resource.user.mention_html(),
-                     requester=update.effective_user.mention_html(),
+                     owner=resource.user.mention_html(f'@{resource.user.username} ({resource.user.full_name})'),
+                     requester=update.effective_user.mention_html(f'@{update.effective_user.username} ({update.effective_user.full_name})'),
                      resource_full_name=resource_full_name)
         context.bot.sendMessage(update.effective_chat.id,
                                 message,
